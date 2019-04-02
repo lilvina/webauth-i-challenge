@@ -2,15 +2,35 @@ const express = require('express')
 const server = express()
 const cors = require('cors')
 const bcrypt = require('bcryptjs')
-
 const knex = require('knex')
 const knexConfig = require('./knexfile.js')
+const session = require('express-session')
+const KnexSessionStore = require('connect-session-knex')(session)
 
 const db = knex(knexConfig.development)
+
+const sessionConfig = {
+  name: 'monster',
+  secret: 'keep it a secret, keep it safe',
+  cookie: {
+    maxAge: 1000 * 60 * 10, //milliseconds
+    secure: false, // use cookie over https
+    httpOnly: true, // false means can JS access the cookie
+  },
+  resave: false, // resave recreating unchanged sessions
+  saveUnitialized: false, // GDPR compliance
+  store: new KnexSessionStore({
+    knex: db,
+    tablename: 'sessions',
+    sidfieldname: 'sid',
+    clearInterval: 1000 * 60 * 30, // deletes expired sessions
+  })
+}
 
 
 server.use(express.json())
 server.use(cors())
+server.use(session(sessionConfig))
 
 server.get('/', (req, res) => {
   res.send("Learning Auth")
@@ -37,6 +57,7 @@ server.post('/api/login', (req, res) => {
     .first()
     .then(user => {
       if(user && bcrypt.compareSync(req.body.password, user.password)) {
+        req.session.user = user
         res.status(200).json({ message: `Logged In`, cookie: user.id})
       } else {
         res.status(401).json({ message: 'Invalid credentials'})
