@@ -92,6 +92,20 @@ function restricted(req, res, next) {
   }
 }
 
+server.get('/api/logout', (req, res) => {
+  if(req.session) {
+    req.session.destroy(err => {
+      if(err) {
+        res.status(500).json({ message: 'You can checkout but cannot leave' })
+      } else {
+        res.status(200).json({ message: 'Bye, thanks for visiting!' })
+      }
+    })
+  } else {
+    res.status(200).json({ message: 'Bye, thanks for visiting! Come back soon!' })
+  }
+})
+
 const port = process.env.PORT || 5000
 server.listen(port, () => {
   console.log(`\n** Running on port:${port} **\n`)
